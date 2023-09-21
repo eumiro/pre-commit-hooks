@@ -34,21 +34,17 @@ def fix_filename(filename: str, fix: str) -> int:
                 break
 
     # Some amount of mixed line endings
-    mixed = sum(bool(x) for x in counts.values()) > 1
+    mixed = len(counts) > 1
 
     if fix == 'no' or (fix == 'auto' and not mixed):
         return mixed
 
     if fix == 'auto':
-        max_ending = LF
-        max_lines = 0
         # ordering is important here such that lf > crlf > cr
-        for ending_type in ALL_ENDINGS:
-            # also important, using >= to find a max that prefers the last
-            if counts[ending_type] >= max_lines:
-                max_ending = ending_type
-                max_lines = counts[ending_type]
-
+        max_ending = max(
+            enumerate(ALL_ENDINGS),
+            key=lambda x: (counts[x[1]], x[0])
+         )[1]
         _fix(filename, contents, max_ending)
         return 1
     else:
@@ -56,7 +52,7 @@ def fix_filename(filename: str, fix: str) -> int:
         # find if there are lines with *other* endings
         # It's possible there's no line endings of the target type
         counts.pop(target_ending, None)
-        other_endings = bool(sum(counts.values()))
+        other_endings = any(counts.values())
         if other_endings:
             _fix(filename, contents, target_ending)
         return other_endings
